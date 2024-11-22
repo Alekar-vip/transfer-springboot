@@ -1,0 +1,108 @@
+plugins {
+	id 'org.springframework.boot' version '2.6.10'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id 'java'
+	id 'checkstyle'
+	id 'jacoco'
+	id "io.freefair.lombok" version "$lombokVersion"
+	id 'info.solidsoft.pitest' version '1.7.4'
+}
+
+group = 'co.com.tipi.central'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+bootJar {
+	enabled = true
+}
+
+checkstyleMain {
+	it.reports {
+		xml.required = false
+		html.required = true
+	}
+}
+ext {
+	jacocoExclusions = [
+			"co/com/tipi/central/transfercentral/config/*"
+	]
+}
+
+jacocoTestReport {
+	it.dependsOn test
+	it.reports {
+		xml.required = true
+		csv.required = false
+	}
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: jacocoExclusions)
+		}))
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// Test framework
+	testImplementation "org.junit.jupiter:junit-jupiter-api"
+	testImplementation "org.junit.jupiter:junit-jupiter-engine"
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-params"
+	testImplementation "org.mockito:mockito-core"
+	testImplementation "com.tngtech.archunit:archunit-junit5:$archUnitVersion"
+	implementation "com.github.javafaker:javafaker:$javaFakerVersion"
+
+
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springdoc:springdoc-openapi-ui:1.6.9'
+	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'mysql:mysql-connector-java'
+	runtimeOnly 'org.postgresql:postgresql'
+	annotationProcessor 'org.projectlombok:lombok'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation group: 'com.h2database', name: 'h2', version: '2.1.214'
+
+	implementation "org.mapstruct:mapstruct:$mapStructVersion"
+	annotationProcessor "org.mapstruct:mapstruct-processor:$mapStructVersion"
+
+	implementation group: 'com.google.code.gson', name: 'gson', version: '2.10.1'
+
+	// https://mvnrepository.com/artifact/com.hierynomus/smbj
+	implementation group: 'com.hierynomus', name: 'smbj', version: '0.12.1'
+}
+test {
+	maxParallelForks 3
+	useJUnitPlatform()
+	testLogging.showStandardStreams = true
+	reports {
+		junitXml.required = true
+		html.required = true
+	}
+	finalizedBy(jacocoTestReport)
+}
+
+pitest {
+	setTargetClasses(["co.com.tipi.central.transfercentral.*"])
+	setTargetTests(["co.com.tipi.central.transfercentral.*"])
+	excludedClasses.set([
+			"co.com.tipi.central.transfercentral.models.*",
+			"co.com.tipi.central.transfercentral.config.*"
+	])
+	outputFormats.set(["HTML", "XML"])
+	junit5PluginVersion.set('0.15')
+	timestampedReports.set(false)
+	exportLineCoverage.set(true)
+	coverageThreshold.set(95)
+	mutationThreshold.set(100)
+}
+
